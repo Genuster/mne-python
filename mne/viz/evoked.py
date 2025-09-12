@@ -27,7 +27,6 @@ from ..utils import (
     _clean_names,
     _is_numeric,
     _pl,
-    _time_mask,
     _to_rgb,
     _validate_type,
     fill_doc,
@@ -300,6 +299,8 @@ def _plot_evoked(
     *,
     highlight=None,
     draw=True,
+    cmap_func=None,
+    h_color=None,
 ):
     """Aux function for plot_evoked and plot_evoked_image (cf. docstrings).
 
@@ -376,6 +377,8 @@ def _plot_evoked(
                 sphere=sphere,
                 draw=False,
                 spatial_colors=spatial_colors,
+                cmap_func=cmap_func,
+                h_color=h_color,
             )
             if remove_xlabels and not ax.get_subplotspec().is_last_row():
                 ax.set_xticklabels([])
@@ -515,6 +518,8 @@ def _plot_evoked(
             time_unit=time_unit,
             sphere=sphere,
             highlight=highlight,
+            cmap_func=cmap_func,
+            h_color=h_color,
         )
         plt.setp(axes, xlabel=f"Time ({time_unit})")
 
@@ -598,6 +603,8 @@ def _plot_lines(
     sphere,
     *,
     highlight,
+    cmap_func=None,
+    h_color=None,
 ):
     """Plot data as butterfly plot."""
     from matplotlib import patheffects
@@ -666,7 +673,10 @@ def _plot_lines(
                     _spat_col = selectable = False
                 if _spat_col is True and len(idx) != 1:
                     x, y, z = locs3d.T
-                    colors = _rgb(x, y, z)
+                    if cmap_func is None:
+                        colors = _rgb(x, y, z)
+                    else:
+                        colors = cmap_func(x, y, z)
                     _handle_spatial_colors(
                         colors, info, idx, this_type, psd, ax, sphere
                     )
@@ -799,7 +809,7 @@ def _plot_lines(
                         this_ylim,
                         this_highlight[0],
                         this_highlight[1],
-                        facecolor="orange",
+                        facecolor=h_color if h_color else "orange",
                         alpha=0.15,
                         zorder=99,
                     )
@@ -989,6 +999,8 @@ def plot_evoked(
     *,
     highlight=None,
     verbose=None,
+    cmap_func=None,
+    h_color=None,
 ):
     """Plot evoked data using butterfly plots.
 
@@ -1133,6 +1145,8 @@ def plot_evoked(
         time_unit=time_unit,
         sphere=sphere,
         highlight=highlight,
+        cmap_func=cmap_func,
+        h_color=h_color,
     )
 
 
@@ -1803,6 +1817,7 @@ def plot_evoked_joint(
     show=True,
     ts_args=None,
     topomap_args=None,
+    cbar_params=None,
 ):
     """Plot evoked data as butterfly plot and add topomaps for time points.
 
@@ -1826,9 +1841,9 @@ def plot_evoked_joint(
         axes are passed make sure to set ``title=None``, otherwise some of your
         axes may be removed during placement of the title axis.
     %(picks_all)s
-    exclude : list of str | 'bads'
+    exclude : None | list of str | 'bads'
         Channels names to exclude from being shown. If ``'bads'``, the
-        bad channels are excluded. Defaults to ``'bads'``.
+        bad channels are excluded. Defaults to ``None``.
     show : bool
         Show figure if ``True``. Defaults to ``True``.
     ts_args : None | dict
@@ -2002,18 +2017,10 @@ def plot_evoked_joint(
     contours = topomap_args.get("contours", 6)
     ch_type = ch_types.pop()  # set should only contain one element
     # Since the data has all the ch_types, we get the limits from the plot.
-    vmin, vmax = (None, None)
+    vmin, vmax = ts_ax.get_ylim()
     norm = ch_type == "grad"
     vmin = 0 if norm else vmin
-    time_idx = [
-        np.where(
-            _time_mask(evoked.times, tmin=t, tmax=None, sfreq=evoked.info["sfreq"])
-        )[0][0]
-        for t in times_sec
-    ]
-    scalings = topomap_args["scalings"] if "scalings" in topomap_args else None
-    scaling = _handle_default("scalings", scalings)[ch_type]
-    vmin, vmax = _setup_vmin_vmax(evoked.data[:, time_idx] * scaling, vmin, vmax, norm)
+    vmin, vmax = _setup_vmin_vmax(evoked.data, vmin, vmax, norm)
     if not isinstance(contours, list | np.ndarray):
         locator, contours = _set_contour_locator(vmin, vmax, contours)
     else:
@@ -2030,7 +2037,11 @@ def plot_evoked_joint(
     if topomap_args.get("colorbar", True):
         from matplotlib import ticker
 
-        cbar = fig.colorbar(map_ax[0].images[0], ax=map_ax, cax=cbar_ax, shrink=0.8)
+        if cbar_params is None:
+            cbar_params = dict()
+        cbar = fig.colorbar(
+            map_ax[0].images[0], ax=map_ax, cax=cbar_ax, shrink=0.8, **cbar_params
+        )
         cbar.ax.grid(False)
         if isinstance(contours, list | np.ndarray):
             cbar.set_ticks(contours)

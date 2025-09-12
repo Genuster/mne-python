@@ -517,6 +517,7 @@ class Evoked(
         *,
         highlight=None,
         verbose=None,
+        cmap_func=None,
     ):
         return plot_evoked(
             self,
@@ -542,6 +543,7 @@ class Evoked(
             sphere=sphere,
             highlight=highlight,
             verbose=verbose,
+            cmap_func=cmap_func,
         )
 
     @copy_function_doc_to_method_doc(plot_evoked_image)
@@ -781,6 +783,7 @@ class Evoked(
         show=True,
         ts_args=None,
         topomap_args=None,
+        cbar_params=None,
     ):
         return plot_evoked_joint(
             self,
@@ -791,6 +794,7 @@ class Evoked(
             show=show,
             ts_args=ts_args,
             topomap_args=topomap_args,
+            cbar_params=cbar_params,
         )
 
     @fill_doc
@@ -810,6 +814,7 @@ class Evoked(
         vmin=None,
         vmax=None,
         verbose=None,
+        cmap=None,
     ):
         """Make animation of evoked data as topomap timeseries.
 
@@ -882,6 +887,7 @@ class Evoked(
             vmin=vmin,
             vmax=vmax,
             verbose=verbose,
+            cmap=cmap,
         )
 
     def as_type(self, ch_type="grad", mode="fast"):
